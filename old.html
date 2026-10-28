@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="refresh" content="15">
+		<link href="css/jquery-ui.css" rel="stylesheet">
+		<style>
+			#yes {
+				color: green;
+				font-size: 20em;
+			}
+			#no {
+				color: red;
+				font-size: 20em;
+			}
+			#almost{
+				color: blue;
+				font-size: 10em;
+			}
+			.mybar > .ui-progressbar-value {
+				background: green;
+			}
+
+
+    .mybar {
+        background: red;
+    }
+
+
+		</style>
+		<title>IsIt5Yet? (%)</title>
+		<link rel="shortcut icon" href="green5.ico">
+	</head>
+	<body bgcolor="#BFDAEF">
+		<div id="QuoteButton"></div>
+		<div id="DisplayText"></div>
+		<div id="Inspiration" style="width: 50%;"><h3></h3></div>
+		<div id="QuoteImage"></div>
+
+		<script src="js/jquery-1.11.3.min.js"></script>
+		<script src="js/jquery-ui.min.js"></script>
+
+		<script>
+			// Same as db_prepare_int from config.asp: anything non-numeric becomes 0
+			function db_prepare_int(integer_value) {
+				if (integer_value === null || integer_value === "" || isNaN(integer_value)) {
+					return 0;
+				}
+				return parseInt(integer_value, 10);
+			}
+
+			// Same as ASP's request.querystring: the parameter name is not case sensitive
+			function GetQueryString(name) {
+				var value = null;
+				new URLSearchParams(window.location.search).forEach(function(v, k) {
+					if (value === null && k.toLowerCase() == name.toLowerCase()) {
+						value = v;
+					}
+				});
+				return value;
+			}
+
+			// Same as VBScript Int(), which rounds down
+			function Int(value) {
+				return Math.floor(Number(value));
+			}
+
+			$(function() {
+				var Seconds, Percentage = "", RedColor, GreenColor, InspirationalQuote = "", TimeThruWeek = "", wRed, wGreen;
+				var Quote, QuoteImage, QuoteID, isRandom;
+
+				QuoteID = db_prepare_int(GetQueryString("QuoteID"));
+
+				$.getJSON("InspirationalQuotations.json", function(Quotes) {
+					var Matches;
+
+					// Replaces: Select Top 1 ID, Quotation, ImagePath From InspirationalQuotations <WhereClause> Order By NewID()
+					if (QuoteID != 0) {
+						Matches = $.grep(Quotes, function(q) { return q.ID == QuoteID; });
+						isRandom = false;
+					} else {
+						Matches = $.grep(Quotes, function(q) { return q.InUse == 1; });
+						isRandom = true;
+					}
+
+					if (Matches.length > 0) {
+						var Row = Matches[Math.floor(Math.random() * Matches.length)];
+						Quote = Row.Quotation;
+						QuoteImage = Row.ImagePath;
+						QuoteID = Row.ID;
+					}
+
+					var Now = new Date();
+					var TheHour = Now.getHours();
+					var TheDay = Now.getDay();
+					var WeekdayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+					// Get the total number of seconds that have elapsed since 9am
+					// There are 28,800 seconds between 9am and 5pm
+					if (TheHour >= 9 && TheHour < 17) {
+						Seconds = (TheHour - 9) * 3600 + Now.getMinutes() * 60 + Now.getSeconds();
+						Percentage = ((Seconds / 28800) * 100).toFixed(2);
+						RedColor = Int(255 * (1 - Percentage / 100));
+						if (RedColor > 255) {
+							RedColor = 255;
+						}
+						if (RedColor < 1) {
+							RedColor = 0;
+						}
+						GreenColor = Int(255 * (Percentage / 100));
+						if (GreenColor > 255) {
+							GreenColor = 255;
+						}
+						if (GreenColor < 1) {
+							GreenColor = 0;
+						}
+
+						if (TheDay != 0 && TheDay != 6) {
+							TimeThruWeek = Seconds + ((TheDay - 1) * 28800);
+							TimeThruWeek = ((TimeThruWeek / 144000) * 100).toFixed(2);
+						}
+
+						//YOINK
+						wRed = Int(255 * (1 - TimeThruWeek / 100));
+						if (wRed > 255) {
+							wRed = 255;
+						}
+						if (wRed < 1) {
+							wRed = 0;
+						}
+						wGreen = Int(255 * (TimeThruWeek / 100));
+						if (wGreen > 255) {
+							wGreen = 255;
+						}
+						if (wGreen < 1) {
+							wGreen = 0;
+						}
+
+						InspirationalQuote = "You're <font style=\"color:rgb(" + RedColor + ", " + GreenColor + ", 0)\">" + Percentage + "%</font> of the way through " + WeekdayNames[TheDay] + " and <font style=\"color:rgb(" + wRed + ", " + wGreen + ", 0)\">" + TimeThruWeek + "%</font> through the work week. <br><div id=\"progressbar\" class=\"mybar\"></div>And remember: <br><br>";
+
+						InspirationalQuote = InspirationalQuote + Quote;
+					}
+
+					var DisplayText;
+					if (TheHour >= 17) {
+						DisplayText = "<div id=\"yes\">YES, GO HOME</div>";
+					} else {
+						if (TheHour >= 16 && Now.getMinutes() >= 40) {
+							DisplayText = "<div id=\"almost\">ALMOST! IS IT MAGIC TIME?</div>";
+						} else {
+							DisplayText = "<div id=\"no\">NO</div>";
+						}
+					}
+
+					document.title = "IsIt5Yet? (" + Percentage + "%)";
+
+					if (isRandom == true) {
+						$("#QuoteButton").html("<button type=\"button\" onclick=\"window.location.href='old.html?QuoteID=" + QuoteID + "'\">Keep this Quote</button>");
+					} else if (isRandom == false) {
+						$("#QuoteButton").html("<button type=\"button\" onclick=\"window.location.href='old.html'\">Back to Random</button>");
+					}
+					$("#DisplayText").replaceWith(DisplayText);
+					$("#Inspiration h3").html(InspirationalQuote);
+					if (QuoteImage) {
+						$("#QuoteImage").html("<img src='" + QuoteImage + "'>");
+					}
+
+					$( ".mybar" ).progressbar({
+						value: Int(Percentage)
+					});
+				});
+			});
+
+		</script>
+	</body>
+</html>

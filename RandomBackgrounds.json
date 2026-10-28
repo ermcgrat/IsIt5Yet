@@ -1,0 +1,34 @@
+[
+	{
+		"ID": 1,
+		"ImagePath": "lols/rain.jpg"
+	},
+	{
+		"ID": 2,
+		"ImagePath": "lols/cove.jpg"
+	},
+	{
+		"ID": 3,
+		"ImagePath": "lols/waterfall.jpg"
+	},
+	{
+		"ID": 4,
+		"ImagePath": "lols/serenity.jpg"
+	},
+	{
+		"ID": 5,
+		"ImagePath": "lols/hotdamn.jpg"
+	},
+	{
+		"ID": 6,
+		"ImagePath": "lols/verypicnictable.jpeg"
+	},
+	{
+		"ID": 7,
+		"ImagePath": "lols/countryside.jpg"
+	},
+	{
+		"ID": 8,
+		"ImagePath": "lols/fallRoad.jpg"
+	}
+]

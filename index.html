@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <title>IsIt5Yet?</title>
+	<link rel="shortcut icon" href="green5.ico">
+
+    <!-- Bootstrap Core CSS -->
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+	<link href="css/jquery-ui.css" rel="stylesheet">
+
+    <!-- Custom CSS -->
+    <link href="css/full-slider.css" rel="stylesheet">
+
+    <script type="text/javascript">
+	
+		var RandomSlideInterval;				// keep a global variable for tracking the random slide timed event, so that we can clear it, etc
+		var ConfettiAlreadyRan = 0;				// to prevent the confetti from running again after 5 if it has already ran
+		var ConfettiCurrentlyRunning = 0;		// to prevent any situations where confetti can be started again if it hasn't finished running yet 
+		
+		// keep a global variable for the Easter Egg stuff
+		var EasterEgg = [];				// holds the keywords to be matched, 30 characters max
+		var EasterEggCommand = [];		// holds the function to call when a keyword is matched
+		var keyHistory = '';
+		EasterEgg[0] = "confetti";
+		EasterEggCommand[0] = "StartConfetti";
+		EasterEgg[1] = "x";
+		EasterEggCommand[1] = "TogglePureSerenity";
+		EasterEgg[2] = 'glowon'
+		EasterEggCommand[2] = 'ProgressBarGlowOn';
+		EasterEgg[3] = 'glowcolor';
+		EasterEggCommand[3] = 'ProgressBarGlowColorChange';
+		EasterEgg[4] = 'help';
+		EasterEggCommand[4] = 'ShowHelp';
+		EasterEgg[5] = 'gc';
+		EasterEggCommand[5] = 'ProgressBarGlowColorChange';
+		
+		// keep a global variable (array to support multiple divs at once!!) for the heartbeat (div shadow/glow transitioning on and off regularly)
+		var Heartbeat = [];
+		var GlowColors = [];		// To be used for the easter egg to cycle through colors manually. 
+		var GlowColorsLabel = [];
+		var GlowColorCurrent = 0;
+		GlowColors[0] = '#F2E1F2';	// white
+		GlowColorsLabel[0] = 'White';
+		GlowColors[1] = '#FF6666';	// red
+		GlowColorsLabel[1] = 'Red';
+		GlowColors[2] = '#00FF66';	// green
+		GlowColorsLabel[2] = 'Green';
+		GlowColors[3] = '#6699FF';	// blue
+		GlowColorsLabel[3] = 'Blue';	
+		GlowColors[4] = '#FF9900';	// orange
+		GlowColorsLabel[4] = 'Orange';	
+		GlowColors[5] = '#9933FF';	// purple
+		GlowColorsLabel[5] = 'Purple';			
+		
+		// some other areas may also want to know what the current percentage is, like the color-selection stuff for Progress Bar shadow/glow
+		var Percentage = 0;
+
+		function RandomSlide() {
+			var numItems = $('.myCarouselItem').length;
+			var randNum = Math.random();
+			var randomSlide = Math.floor(randNum * numItems);
+			
+			var StickQuote = $("#StickQuote").val();
+			
+			if (StickQuote == "0") {
+				$('#myCarousel').carousel(randomSlide);
+			}
+			
+			var RefreshTime = $("#RefreshTime").val();
+			RandomSlideInterval = setTimeout(function () {
+				RandomSlide();
+			}, RefreshTime);
+		}	// RandomSlide()
+		
+		function CalcPerc() {
+
+			var CurrentTime = new Date();
+			var TheHours = CurrentTime.getHours();
+			var TheMinutes = CurrentTime.getMinutes();
+			var TheSeconds = CurrentTime.getSeconds();
+			var TheDay = CurrentTime.getDay();
+			
+			var weekday = new Array(7);
+			weekday[0]=  "Sunday";
+			weekday[1] = "Monday";
+			weekday[2] = "Tuesday";
+			weekday[3] = "Wednesday";
+			weekday[4] = "Thursday";
+			weekday[5] = "Friday";
+			weekday[6] = "Saturday";
+			
+			if (TheDay == 0 || TheDay == 6) {
+			
+				// It is the weekend!
+				Percentage = 100;
+				// change the progress bar color to green
+				$('#MyProgressBar').removeClass('progress-bar-danger').removeClass('progress-bar-info').addClass('progress-bar-success');
+				$('#MyProgressBar').css('width', Percentage +'%').attr('aria-valuenow', Percentage).html(Percentage + '%');
+				
+				$("#TimeThruWeek").html("It is the weekend!!!");
+				
+			} else {
+			
+				if (TheHours >= 9 && TheHours < 17) {
+					// Get the total number of seconds that have elapsed since 9am
+					// There are 28,800 seconds between 9am and 5pm
+					var TotalSeconds = (TheHours - 9) * 3600 + TheMinutes * 60 + TheSeconds;
+					Percentage = ((TotalSeconds / 28800) * 100).toFixed(2);
+					
+					var TotalSecondsWeek = TotalSeconds + (TheDay - 1) * 28800;
+					var PercentageWeek = ((TotalSecondsWeek / 144000) * 100).toFixed(2);	
+
+					// change the progress bar color to blue
+					$('#MyProgressBar').removeClass('progress-bar-danger').removeClass('progress-bar-success').addClass('progress-bar-info');					
+					$('#MyProgressBar').css('width', Percentage +'%').attr('aria-valuenow', Percentage).html(Percentage + '%');
+					$("#TimeThruWeek").html("You're " + Percentage + "% through " + weekday[TheDay] + ", and " + PercentageWeek + "% through the work week.");
+					
+					ConfettiAlreadyRan = 0;	// reset this, so when it becomes 5 pm eventually, the confetti stuff will run 
+					
+				} else {
+				
+					if (TheHours >= 17) {
+						Percentage = 100;
+						var TotalSecondsWeek = 28800 + (TheDay - 1) * 28800;
+						var PercentageWeek = ((TotalSecondsWeek / 144000) * 100).toFixed(2);	
+						
+						// change the progress bar color to green
+						$('#MyProgressBar').removeClass('progress-bar-danger').removeClass('progress-bar-info').addClass('progress-bar-success');
+						$('#MyProgressBar').css('width', Percentage +'%').attr('aria-valuenow', Percentage).html(Percentage + '%');
+						$("#TimeThruWeek").html("You're " + Percentage + "% through " + weekday[TheDay] + ", and " + PercentageWeek + "% through the work week.");
+						
+						// Is this the first time we've run since it became 5!? Time to celebrate with confetti!
+						if (ConfettiAlreadyRan == 0) {
+							StartConfetti();
+							heartbeat('#MyProgressBarWrapper', '#339966', 1600, 30);		// let's make the progress bar glow too, for fun!
+							ConfettiAlreadyRan = 1;
+						}
+					} else {
+						Percentage = 0;	// make the bar full red though
+						
+						$('#MyProgressBar').css('width', '100%').attr('aria-valuenow', 100).html(Percentage + '%');
+						
+						var TotalSecondsWeek = 0 + (TheDay - 1) * 28800;
+						var PercentageWeek = ((TotalSecondsWeek / 144000) * 100).toFixed(2);	
+						
+						// change the progress bar color to red
+						$('#MyProgressBar').removeClass('progress-bar-success').removeClass('progress-bar-info').addClass('progress-bar-danger');
+						$("#TimeThruWeek").html("You're " + Percentage + "% through " + weekday[TheDay] + ", and " + PercentageWeek + "% through the work week.");
+					}
+				
+				}	// TheHours >= 9 && TheHours < 17
+			
+			}	// TheDay == 0 || TheDay == 6			
+			
+			document.title = "IsIt5Yet? " + Percentage + "%";
+		
+			// Keep calling the time calculator every 3 seconds
+			setTimeout(function () {
+				CalcPerc();
+			}, 3000);
+		}	// CalcPerc()
+		
+		function ScrollSpeed(NumOfMilliSeconds) {
+			$("#RefreshTime").val(NumOfMilliSeconds);
+		}	// ScrollSpeed()
+		
+		// start the badass confetti engine, and then let it run for 20 seconds before initiating the shutdown sequence
+		function StartConfetti() {
+		
+			if (ConfettiCurrentlyRunning == 0) {
+			
+				$('#ConfettiBlanket').toggle(false);	// make sure it is off, then fade it in
+				// fade in over 2 seconds, let the confetti run for 20 seconds, then turn it off
+				$('#ConfettiBlanket').fadeIn(2000, function() {
+					setTimeout(StopConfetti, 20000);
+				});
+				
+				$('#StopConfetti').val(0);
+				ConfettiCurrentlyRunning = 1;
+				VeryConfetti();			// has confetti and ribbons
+				
+			}	// ConfettiCurrentlyRunning == 0?
+		
+		}	// StartConfetti()
+		
+		function StopConfetti() {
+		
+			// let's make this look a little nicer and fade out the stop effect			
+			$('#ConfettiBlanket').fadeOut(10000, function() {
+				$('#StopConfetti').val(1);
+				ConfettiCurrentlyRunning = 0;
+			});
+			
+		}	// StopConfetti()
+		
+		function TogglePureSerenity() {
+			if ($(".ShadowQuote").is(':animated') == false) {	// if it is still animating from a prior execution, do nothing
+				$(".ShadowQuote").stop().slideToggle(300);
+				$("#NavigationBar").stop().toggle(300);	// hide the top bar too for pure serenity, because why not? 
+			}
+		}
+		
+		// checks user key inputs for easter egg commands
+		function CheckEggs(e) {
+		
+			var index;
+			var maxKeyHistoryLength = 30;
+			keyHistory += String.fromCharCode(e.which);	// keep a running log of the keys entered			
+			
+			for (index = 0; index < EasterEgg.length; index++) {
+			
+				if (keyHistory.match(EasterEgg[index])) {
+					keyHistory = '';
+					window[EasterEggCommand[index]]();
+				} else if (keyHistory.length > maxKeyHistoryLength) {
+					keyHistory = keyHistory.substr(1);
+				}
+			
+			}
+		
+		}	// CheckEggs()
+
+		// Make the input glow on and off repeatedly for an amount of time.
+		// Inputs:
+		// divID: the element(s) you want affected, specified by string. eg '#MyProgressBarWrapper
+		// color: hexidecimal value that the glow/shadow should be. eg '#339966'
+		// speed: how fast the glow should fade from on to off, repeatedly, in milliseconds. eg 1600
+		// how long the effect should run for, in seconds. eg 30
+		function heartbeat(divID, color, speed, duration) {
+		
+			$(divID).stop();
+			Heartbeat[divID] = 1;
+			
+			if (duration > 0) {
+				setTimeout(function() {
+					Heartbeat[divID] = 0;
+				}, duration * 1000);
+			}
+			
+			divShadowOn(divID, color, speed);
+		
+		}	// heartbeat
+		
+		// This is a helper function to heartbeat, and should not be used directly
+		function divShadowOn(divID, color, speed) {
+		
+			var ShadowBlur = '25px';	// these values can adjust the size/intensity/appearance of the shadow
+			var ShadowSize = '5px';
+			
+			$(divID).stop().animate({boxShadow: '0px 0px ' + ShadowBlur + ' ' + ShadowSize + ' ' + color}, speed, function() {
+				divShadowOff(divID, color, speed);
+			});
+			
+		}	// divShadowOn
+		
+		// This is a helper function to heartbeat, and should not be used directly
+		function divShadowOff(divID, color, speed) {
+		
+			// determine if we need to start another heartbeat after this one completes
+			if (Heartbeat[divID] == 1) {
+				$(divID).stop().animate({boxShadow: '0px 0px 0px 0px ' + color}, speed, function() {
+					divShadowOn(divID, color, speed);
+				});
+			} else {
+				$(divID).stop().animate({boxShadow: '0px 0px 0px 0px ' + color}, speed);
+			}
+		
+		}	// divShadowOff
+		
+		// This function will return the color (eg #00FF66) based upon Percentage, so the glow/shadow can match the progress bar
+		// // white f2e1f2, green 00FF66, red #FF6666, blue #6699FF
+		function getShadowColorFromPercent() {
+			var color;
+			if (Percentage == 0) {
+				color = '#FF6666';
+			} else if (Percentage == 100) {
+				color = '#00FF66';
+			} else {
+				color = '#6699FF';
+			}
+			return color;
+		}	// getShadowColorFromPercent
+		
+		// For use by the easter egg command. Turns progress bar glow/heartbeat on, choosing to color-match the progress bar
+		function ProgressBarGlowOn() {
+			var color = getShadowColorFromPercent();
+			heartbeat('#MyProgressBarWrapper', color, 1600, 0);		
+		}	// ProgressBarGlowOn
+		
+		// For use by the easter egg command. Cycles to the next glow/shadow color, and turns the heartbeat on.
+		function ProgressBarGlowColorChange() {
+			GlowColorCurrent++;
+			if (GlowColorCurrent >= GlowColors.length) {	// wrap around if we've reached the end of the colors
+				GlowColorCurrent = 0;
+			}
+			heartbeat('#MyProgressBarWrapper', GlowColors[GlowColorCurrent], 1600, 0);	
+			$.notify("Glow Color: " + GlowColorsLabel[GlowColorCurrent], {position:"bottom right", className: "info"});
+		}	// ProgressBarGlowColorChange
+		
+		function ShowHelp() {
+			$('#InstructionsModal').modal('show');
+		}	// ShowHelp
+	</script>	
+	
+	<style>
+		#ConfettiBlanket {
+			z-index:1000;
+			position:fixed;
+			top:0;
+			left:0;
+			width:100%;
+			height:100%;
+			opacity:0.55;
+			background: black;
+		}
+		
+		#confetti{
+			position: absolute;
+			left: 0;
+			top: 0;
+			height: 100%;
+			width: 100%;
+		}
+		
+		.ShadowQuote {
+			-webkit-text-stroke: 1px black;
+			font-size: 3.5em;
+			color: white;
+			text-shadow:
+				3px 3px 0 #000,
+				-1px -1px 0 #000,  
+				1px -1px 0 #000,
+				-1px 1px 0 #000,
+				1px 1px 0 #000;
+		}
+		
+		#MyProgressBar {
+			min-width: 3em;		/* keep the bar wide enough to fit its label, even at very low percentages */
+		}
+
+		.glowwhite {
+			-webkit-box-shadow: 0px 0px 0px 0px #f2e1f2;
+			-moz-box-shadow: 0px 0px 0px 0px #f2e1f2;
+			box-shadow: 0px 0px 0px 0px #f2e1f2; 
+			/*
+			-webkit-transition: all 1.5s ease-in-out;
+			-moz-transition: all 1.5s ease-in-out;
+			-o-transition: all 1.5s ease-in-out;
+			transition: all 1.5s ease-in-out;
+			*/
+		}
+	</style>
+
+</head>
+
+<body>
+
+	<form id="HiddenInputThingsHehe">
+		<input type="hidden" id="RefreshTime" value="10000">
+		<input type="hidden" id="StickQuote" value="0">
+		<input type="hidden" id="ProgressBarAlwaysActive" value="0">
+		<input type="hidden" id="StopConfetti" value="0">
+	</form>
+
+    <!-- Navigation -->
+    <nav class="navbar navbar-inverse navbar-fixed-top" id="NavigationBar" role="navigation">
+        <div class="container">
+            <!-- Brand and toggle get grouped for better mobile display -->
+            <div class="navbar-header">
+                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
+                    <span class="sr-only">Toggle navigation</span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand" href="index.html"><span class="glyphicon glyphicon-refresh" aria-hidden="true"></span> Reload</a>
+            </div>
+            <!-- Collect the nav links, forms, and other content for toggling -->
+            <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+                <ul class="nav navbar-nav">
+                    <li>
+                        <a id="StickQuoteLink" href="#">Stick Quote</a>
+                    </li>
+
+					<li class="dropdown">
+						<a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Preferences <span class="caret"></span></a>
+						<ul class="dropdown-menu">
+							<li id="ScrollSpeed10" class="ScrollSpeedChoice active"><a href="#">Scroll: 10 seconds</a></li>
+							<li id="ScrollSpeed30" class="ScrollSpeedChoice"><a href="#">Scroll: 30 seconds</a></li>
+							<li id="ScrollSpeed60" class="ScrollSpeedChoice"><a href="#">Scroll: 60 seconds</a></li>
+							<li role="separator" class="divider"></li>
+							<li id="VerySecret"><a href="#">Very Secret</a></li>
+							<li role="separator" class="divider"></li>
+							<li id="ShareQuote"><a href="#">Share This Quote</a></li>
+						</ul>
+					</li>
+                </ul>
+				
+				<div class="progress glowwhite" id="MyProgressBarWrapper" style="margin-top:15px;border-radius: 25px;">				
+					<div id="MyProgressBar" class="progress-bar progress-bar-striped" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%;">0%</div>
+				</div>
+            </div><!-- /.navbar-collapse -->
+        </div><!-- /.container -->
+    </nav>
+	<!-- End Navigation -->
+
+    <!-- Full Page Image Background Carousel Header -->
+    <header id="myCarousel" class="carousel slide">
+        <!-- Wrapper for Slides -->
+        <div class="carousel-inner">
+		
+		
+        </div><!-- /.carousel-inner -->
+
+        <!-- Controls -->
+        <a class="left carousel-control" id="LeftCarouselControl" href="#myCarousel" data-slide="prev">
+            <span class="icon-prev"></span>
+        </a>
+        <a class="right carousel-control" id="RightCarouselControl" href="#myCarousel" data-slide="next">
+            <span class="icon-next"></span>
+        </a>
+
+    </header>
+
+    <!-- Page Content (below the full-page carousel) -->
+    <div class="container">
+
+        <div class="row">
+            <div class="col-lg-12">
+                <h1 id="TimeThruWeek"></h1>
+            </div>
+        </div>
+
+    </div><!-- /.container -->
+	
+	<!-- Information Popup/modal -->
+	<div class="modal fade" id="InstructionsModal" tabindex="-1" role="dialog" aria-labelledby="InstructionsModalLabel">
+		<div class="modal-dialog" role="document">
+			<div class="modal-content">
+				<div class="modal-header">
+					<button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+					<h4 class="modal-title" id="InstructionsModalLabel">Help</h4>
+				</div>
+				<div class="modal-body">
+					<p>Type any of these anywhere on the page:</p>
+					<dl class="dl-horizontal">
+						<dt>confetti</dt>
+						<dd>Celebrate like it's 5 o'clock</dd>
+						<dt>x</dt>
+						<dd>Pure serenity: hide the quote and top bar</dd>
+						<dt>glowon</dt>
+						<dd>Make the progress bar glow</dd>
+						<dt>glowcolor / gc</dt>
+						<dd>Cycle the glow color</dd>
+						<dt>help</dt>
+						<dd>Show this help</dd>
+					</dl>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>
+				</div>
+			</div>
+		</div>
+	</div><!-- /.modal -->
+	
+	<div id="ConfettiBlanket" ><canvas id="confetti" width="1" height="1"></canvas></div>
+
+    <!-- jQuery -->
+    <script src="js/jquery.js"></script>
+	<script src="js/jquery-ui.min.js"></script>
+	<!-- jQuery can't animate css shadow stuff at this time, this library will do it for us, kind of. -->
+	<!-- If you try and transition the shadow stuff with jquery, it will just turn it on/off immediately without any transition. -->
+	<!-- This extra library seems to NEED the CSS shadow stuff in place already for the div you want to glow. -->
+	<!-- So we add a blank shadow class to our div (even if all the shadow properties are set to 0 size so it is effectively disabled), then we can start -->
+	<!-- to adjust the shadow size and color using this library. -->
+	<!-- It also looks like if you specify the transition time stuff in CSS, it will override how this library works. So if you want to control -->
+	<!-- the transition speeds yourself, you must leave these out of the CSS -->
+	<!-- All things considered, it seems like this box shadow stuff isn't well supported yet, and you have a lot of work arounds to consider (for smooth transitions). -->
+	<!-- Maybe future versions of jQuery will handle it normally, and you can simply transition to a shadow-class smoothly over time like anything else. -->
+	<script src="js/jquery-animate-shadow.js"></script>
+
+    <!-- Bootstrap Core JavaScript -->
+    <script src="js/bootstrap.min.js"></script>
+	
+	<!-- Confetti canvas things -->
+	<script src="js/confetti.js"></script>
+	
+	<!-- Notifications -->
+	<script src="js/notify.js"></script>
+
+    <!-- Load quotes/backgrounds from JSON and build the carousel items (replaces the server-side ASP) -->
+    <script>
+	
+	// Same as db_prepare_int from config.asp: anything non-numeric becomes 0
+	function db_prepare_int(integer_value) {
+		if (integer_value === null || integer_value === "" || isNaN(integer_value)) {
+			return 0;
+		}
+		return parseInt(integer_value, 10);
+	}
+
+	// Same as ASP's request.querystring: the parameter name is not case sensitive
+	function GetQueryString(name) {
+		var value = null;
+		new URLSearchParams(window.location.search).forEach(function(v, k) {
+			if (value === null && k.toLowerCase() == name.toLowerCase()) {
+				value = v;
+			}
+		});
+		return value;
+	}
+
+	// Allow for specifying the QuoteID from the querystring. If one is specified, start with it being stuck (carousel timer disabled)
+	var QuoteID = db_prepare_int(GetQueryString("QuoteID"));
+	if (QuoteID != 0) {
+		$("#StickQuote").val(1);
+		$("#StickQuoteLink").text("UnStick Quote");
+	}
+
+	$.when($.getJSON("RandomBackgrounds.json"), $.getJSON("InspirationalQuotations.json")).done(function(BackgroundsResult, QuotesResult) {
+		var RandomBkgArray = $.map(BackgroundsResult[0], function(b) { return b.ImagePath; });
+		var Quotes = $.grep(QuotesResult[0], function(q) { return q.InUse == 1; });
+		var FirstPass = 1;	// for the "active" carousel item. We must always initialize one active or the whole thing won't work
+		var ItemsHtml = "";
+		
+		// Order By NewID()
+		for (var i = Quotes.length - 1; i > 0; i--) {
+			var j = Math.floor(Math.random() * (i + 1));
+			var tmp = Quotes[i]; Quotes[i] = Quotes[j]; Quotes[j] = tmp;
+		}
+		
+		$.each(Quotes, function(index, q) {
+			var ItemIsActive = "";
+			var TheImagePath;
+			
+			// Do we have an image associated with this quotation, or do we need to grab a random one?
+			if (q.ImagePath) {
+				TheImagePath = q.ImagePath;
+			} else {
+				TheImagePath = RandomBkgArray[Math.floor(Math.random() * RandomBkgArray.length)];
+			}
+			
+			// Do we have a match from the querystring?
+			if (String(q.ID) == String(QuoteID)) {
+				ItemIsActive = " active";
+			}
+			if (QuoteID == 0 && FirstPass == 1) {
+				ItemIsActive = " active";
+				FirstPass = 0;
+			}
+			
+			ItemsHtml += '            <div class="item myCarouselItem' + ItemIsActive + '" data-quote-id="' + q.ID + '">\n' +
+				'                <!-- Set the first background image using inline CSS below. -->\n' +
+				'                <div class="fill" style="background-image:url(\'' + TheImagePath + '\');"></div>\n' +
+				'                <div class="carousel-caption">\n' +
+				'                    <h2 class="ShadowQuote">' + q.Quotation + '</h2>\n' +
+				'                </div>\n' +
+				'            </div>\n';
+		});
+		
+		$("#myCarousel .carousel-inner").html(ItemsHtml);
+
+		// The QuoteID didn't match a quote that's in use, so fall back to the first (random) slide and don't stick it
+		if ($("#myCarousel .myCarouselItem.active").length == 0) {
+			$("#myCarousel .myCarouselItem").first().addClass("active");
+			$("#StickQuote").val(0);
+			$("#StickQuoteLink").text("Stick Quote");
+		}
+	});
+	
+    </script>
+
+    <!-- Script to Activate the Carousel -->
+    <script>
+	
+	$(document).ready(function(){
+		var RefreshTime = $("#RefreshTime").val();
+		// Start the random slide timer.
+		RandomSlideInterval = setTimeout(function () {
+			RandomSlide();
+		}, RefreshTime);			
+				
+		$('#ConfettiBlanket').toggle(false);	// turn it off when page loads initially
+		
+		// Once the page loads, we need to immedoately calculate the percentage. This function will call itself upon completion at regular intervals
+		CalcPerc();
+		
+		// Start the easter egg/keyword listener
+		$(document).keypress(function(e) {
+			CheckEggs(e);
+		});
+		
+		// Left and right arrow keys to allow controlling the carousel. keydown captures arrow keys, keypress does not.
+		$(document).keydown(function(e) {
+			if (e.which == 37) {
+				$('#LeftCarouselControl').click();
+			}
+			if (e.which == 39) {
+				$('#RightCarouselControl').click();
+			}
+		});
+		
+		$.notify.defaults({ className: "success" });
+	});		
+	
+    $('#myCarousel').carousel({
+        interval: 0 //changes the speed that it automatically moves. 0 is disabled.
+    })
+	
+	$("#StickQuoteLink").click(function() {
+		
+		var StickQuote = $("#StickQuote").val();
+		if (StickQuote == "0") {
+			$("#StickQuote").val(1);
+			$("#StickQuoteLink").text("UnStick Quote");
+		} else {
+			$("#StickQuote").val(0);
+			$("#StickQuoteLink").text("Stick Quote");
+		}
+		
+	});
+	
+	// Progress bar to animate on hover, or remain animating when toggled on by a click
+	// And also glow, choose the right color based upon the time
+	$("#MyProgressBarWrapper").hover(
+		function() {
+			$(this).addClass("active");
+			var color = getShadowColorFromPercent();
+			heartbeat('#MyProgressBarWrapper', color, 1600, 0);
+		},
+		function() {
+			var ProgressBarAlwaysActive = $("#ProgressBarAlwaysActive").val();
+			if (ProgressBarAlwaysActive == 0) {
+				$(this).removeClass("active");
+			}
+			Heartbeat['#MyProgressBarWrapper'] = 0;
+		}
+	);
+	
+	$("#MyProgressBar").click(function() {
+		var ProgressBarAlwaysActive = $("#ProgressBarAlwaysActive").val();
+		
+		if (ProgressBarAlwaysActive == 1) {
+			$("#ProgressBarAlwaysActive").val(0);
+		} else {
+			$("#ProgressBarAlwaysActive").val(1);
+		}
+	});
+	
+	$('#ScrollSpeed10').click(function() {		
+		ScrollSpeed(10000);		
+		$('.ScrollSpeedChoice').removeClass('active');
+		$('#ScrollSpeed10').addClass('active');
+	});
+	
+	$('#ScrollSpeed30').click(function() {		
+		ScrollSpeed(30000);
+		$('.ScrollSpeedChoice').removeClass('active');
+		$('#ScrollSpeed30').addClass('active');	
+	});
+	
+	$('#ScrollSpeed60').click(function() {		
+		ScrollSpeed(60000);
+		$('.ScrollSpeedChoice').removeClass('active');
+		$('#ScrollSpeed60').addClass('active');		
+	});
+	
+	// when they manually move between items, we need to reset the timer
+	$('.carousel-control').click(function() {
+		clearTimeout(RandomSlideInterval);		
+		
+		var RefreshTime = $("#RefreshTime").val();
+		RandomSlideInterval = setTimeout(function () {
+			RandomSlide();
+		}, RefreshTime);
+	});
+	
+	$('#VerySecret').click(function() {
+		ShowHelp();
+	});
+	
+	// Put a link to the current quote in the address bar and copy it to the clipboard
+	$('#ShareQuote').click(function(e) {
+		e.preventDefault();	// don't let the href="#" get tacked onto the link
+
+		var ShareQuoteID = $('#myCarousel .myCarouselItem.active').data('quote-id');
+		var ShareUrl = window.location.origin + window.location.pathname + '?QuoteID=' + ShareQuoteID;
+		history.replaceState(null, '', ShareUrl);
+
+		if (navigator.clipboard) {
+			navigator.clipboard.writeText(ShareUrl).then(function() {
+				$.notify("Link copied", {position:"bottom right"});
+			}, function() {
+				$.notify("Couldn't copy, but the link is in the address bar", {position:"bottom right", className: "warn"});
+			});
+		} else {
+			$.notify("Couldn't copy, but the link is in the address bar", {position:"bottom right", className: "warn"});
+		}
+	});
+	
+    </script>	
+	
+</body>
+</html>
